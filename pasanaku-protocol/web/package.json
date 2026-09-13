@@ -17,6 +17,7 @@
     "@pollar/react": "^0.11.3",
     "@tanstack/react-query": "^5.102.8",
     "@wagmi/core": "2.22.1",
+    "@pasanaku/sdk": "file:../sdk",
     "lucide-react": "^1.45.0",
     "next": "^15.5.2",
     "react": "^19.1.1",

@@ -296,7 +296,9 @@ function PollarPay() {
             </button>
             <p className="text-xs leading-5 text-dim">
               Si Google da 403: dashboard.pollar.xyz → Allowed domains →{" "}
-              <span className="font-mono">http://localhost:3000</span>
+              <span className="font-mono">
+                {typeof window !== "undefined" ? window.location.origin : "esta URL"}
+              </span>
             </p>
           </div>
         ) : (
