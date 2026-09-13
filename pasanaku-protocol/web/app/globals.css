@@ -1,0 +1,140 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+nextjs-portal {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+html,
+body {
+  background: #f7f4ee;
+  color: #1c1917;
+}
+
+body {
+  min-height: 100vh;
+  font-size: 17px;
+  line-height: 1.6;
+  letter-spacing: -0.011em;
+}
+
+h1,
+h2,
+h3 {
+  font-family: Outfit, "Segoe UI", sans-serif;
+  letter-spacing: -0.035em;
+  color: #1c1917;
+}
+
+::selection {
+  background: #c45c26;
+  color: #fff;
+}
+
+.rise {
+  animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.rise-2 {
+  animation: rise 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+.rise-3 {
+  animation: rise 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.22s both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes floaty {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.75);
+  }
+}
+
+@keyframes bar {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.floaty {
+  animation: floaty 6s ease-in-out infinite;
+}
+
+.live-dot {
+  display: inline-block;
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}
+
+.glow {
+  box-shadow:
+    0 1px 2px rgba(28, 25, 23, 0.04),
+    0 24px 60px rgba(28, 25, 23, 0.08);
+}
+
+.btn {
+  @apply inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-medium transition duration-200;
+}
+.btn:hover {
+  transform: translateY(-1px);
+}
+.btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.input {
+  @apply w-full rounded-2xl border border-line bg-soft px-3 py-2.5 text-sm outline-none transition;
+}
+.input:focus {
+  border-color: #c45c26;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(196, 92, 38, 0.12);
+}
+
+.rule-bar {
+  transform-origin: left;
+  animation: bar 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .rise-2,
+  .rise-3,
+  .floaty,
+  .live-dot,
+  .rule-bar {
+    animation: none;
+  }
+  .btn:hover {
+    transform: none;
+  }
+}

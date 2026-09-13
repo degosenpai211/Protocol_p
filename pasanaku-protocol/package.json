@@ -1,0 +1,22 @@
+{
+  "name": "pasanaku-protocol",
+  "version": "0.1.0",
+  "description": "Protocolo no-custodio de pasanaku (ROSCA) on-chain para Avalanche",
+  "license": "MIT",
+  "scripts": {
+    "build": "hardhat compile",
+    "test": "hardhat test",
+    "simulate": "hardhat run scripts/simulate-cycle.ts",
+    "deploy:fuji": "hardhat run scripts/deploy.ts --network fuji"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.10",
+    "typescript": "^5.5.4",
+    "ts-node": "^10.9.2",
+    "dotenv": "^16.4.5"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.2"
+  }
+}
