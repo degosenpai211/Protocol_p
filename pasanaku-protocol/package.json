@@ -4,6 +4,8 @@
   "description": "Protocolo no-custodio de pasanaku (ROSCA) on-chain para Avalanche",
   "license": "MIT",
   "scripts": {
+    "dev": "npm run dev --prefix web",
+    "web": "npm run dev --prefix web",
     "build": "hardhat compile",
     "test": "hardhat test",
     "simulate": "hardhat run scripts/simulate-cycle.ts",

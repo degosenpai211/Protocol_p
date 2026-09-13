@@ -12,12 +12,14 @@ export function useUnlockKey() {
     queryFn: () => readHasValidKey(address!),
     enabled: configured && !!address,
     staleTime: 20_000,
+    retry: 0,
+    gcTime: 60_000,
   });
 
   return {
     hasKey: configured && address ? (query.data ?? null) : null,
     isConnected,
     configured,
-    isLoading: query.isLoading,
+    isLoading: query.isPending && query.fetchStatus === "fetching",
   };
 }

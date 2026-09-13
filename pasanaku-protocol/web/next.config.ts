@@ -4,8 +4,9 @@ import path from "path";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  outputFileTracingRoot: path.join(__dirname, ".."),
   experimental: {
-    optimizePackageImports: ["wagmi", "viem", "@tanstack/react-query"],
+    optimizePackageImports: ["wagmi", "viem", "@tanstack/react-query", "lucide-react"],
   },
   devIndicators: false,
   webpack: (config) => {

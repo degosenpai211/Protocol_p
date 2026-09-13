@@ -9,7 +9,7 @@ export function MembershipBadge() {
   return (
     <span
       className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
-        hasKey ? "bg-soft text-num" : "border border-line text-dim"
+        hasKey ? "bg-mint text-num" : "border border-line text-dim"
       }`}
     >
       {hasKey ? "Llave" : "Sin llave"}

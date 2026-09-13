@@ -3,6 +3,7 @@
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi";
 import { MembershipBadge } from "@/components/MembershipBadge";
 import { targetChain } from "@/lib/chain";
+import { demoLetter } from "@/lib/demo";
 
 const fujiChainIdHex = `0x${targetChain.id.toString(16)}`;
 
@@ -13,6 +14,17 @@ export function WalletBar() {
   const { switchChain } = useSwitchChain();
   const injected = connectors[0];
   const onFuji = isConnected && chainId === targetChain.id;
+  const letter = demoLetter(address);
+
+  async function conectar() {
+    if (!injected) return;
+    try {
+      await connect({ connector: injected });
+    } catch {
+      const eth = (window as unknown as { ethereum?: { request: (a: unknown) => Promise<unknown> } }).ethereum;
+      await eth?.request({ method: "eth_requestAccounts" });
+    }
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -42,13 +54,13 @@ export function WalletBar() {
               });
             }
           }}
-          className="btn bg-num text-white"
+          className="btn bg-num text-canvas"
         >
           Fuji
         </button>
       )}
       {onFuji && (
-        <span className="rounded-full border border-line px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-dim">
+        <span className="rounded-full bg-mint px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-num">
           Fuji
         </span>
       )}
@@ -57,14 +69,11 @@ export function WalletBar() {
           onClick={() => disconnect()}
           className="rounded-full border border-line bg-card px-4 py-2 font-mono text-xs"
         >
+          {letter ? `${letter} · ` : ""}
           {address?.slice(0, 6)}…{address?.slice(-4)}
         </button>
       ) : (
-        <button
-          disabled={!injected || isPending}
-          onClick={() => injected && connect({ connector: injected })}
-          className="btn bg-ink text-white"
-        >
+        <button disabled={!injected || isPending} onClick={conectar} className="btn bg-ink text-canvas">
           Conectar
         </button>
       )}

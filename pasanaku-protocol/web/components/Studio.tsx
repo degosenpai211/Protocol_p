@@ -138,7 +138,7 @@ export function Studio() {
 
   if (!configured) {
     return (
-      <div className="rise rounded-[28px] border border-dashed border-line bg-card p-8">
+      <div className="rise rounded-[22px] border border-dashed border-line bg-card p-8">
         <h2 className="text-2xl font-semibold">Sin riel</h2>
         <p className="mt-2 text-sm text-dim">Pegá las direcciones en .env.local</p>
         <pre className="mt-4 overflow-x-auto rounded-2xl bg-soft p-4 text-xs text-dim">
@@ -151,8 +151,8 @@ NEXT_PUBLIC_TOKEN_ADDRESS=`}
 
   return (
     <div className="rise grid gap-5 lg:grid-cols-2">
-      <section className="glow rounded-[28px] border border-line bg-card p-6">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">nuevo</p>
+      <section className="glow rounded-[22px] border border-line bg-card p-6">
+        <p className="kicker">nuevo</p>
         <h2 className="mt-1 text-xl font-semibold">Círculo</h2>
 
         <textarea
@@ -187,7 +187,7 @@ NEXT_PUBLIC_TOKEN_ADDRESS=`}
               ),
             )
           }
-          className="btn mt-5 w-full bg-accent text-white disabled:opacity-40"
+          className="btn mt-5 w-full bg-accent text-canvas disabled:opacity-40"
         >
           Crear
         </button>
@@ -234,10 +234,10 @@ NEXT_PUBLIC_TOKEN_ADDRESS=`}
         </div>
       </section>
 
-      <section className="glow rounded-[28px] border border-line bg-card p-6">
+      <section className="glow rounded-[22px] border border-line bg-card p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-num">
+            <p className="kicker !text-num">
               {phaseLabel(phaseN)}
             </p>
             <h2 className="mt-1 text-xl font-semibold">Bono</h2>
@@ -375,7 +375,7 @@ NEXT_PUBLIC_TOKEN_ADDRESS=`}
             {hash.slice(0, 10)}…
           </a>
         )}
-        {error && <p className="mt-3 text-xs text-red-600">{error.message}</p>}
+        {error && <p className="mt-3 text-xs text-red-400">{error.message}</p>}
       </section>
     </div>
   );
@@ -404,7 +404,7 @@ function ModeChip({ active, onClick, label }: { active: boolean; onClick: () => 
       type="button"
       onClick={onClick}
       className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
-        active ? "bg-accent text-white" : "border border-line text-dim hover:text-ink"
+        active ? "bg-accent text-canvas" : "border border-line text-dim hover:text-ink"
       }`}
     >
       {label}
@@ -431,7 +431,7 @@ function Action({
   disabled?: boolean;
 }) {
   return (
-    <button disabled={disabled} onClick={onClick} className="btn bg-ink text-white disabled:opacity-35">
+    <button disabled={disabled} onClick={onClick} className="btn bg-ink text-canvas disabled:opacity-35">
       {children}
     </button>
   );

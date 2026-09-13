@@ -12,9 +12,9 @@ export const wagmiConfig = createConfig({
   chains: [targetChain],
   connectors: [injected({ shimDisconnect: true })],
   transports: {
-    [targetChain.id]: http(fujiRpc, { batch: true }),
+    [targetChain.id]: http(fujiRpc, { batch: true, timeout: 12_000 }),
   },
-  ssr: true,
+  ssr: false,
 });
 
 export function Providers({ children }: { children: ReactNode }) {

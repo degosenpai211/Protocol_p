@@ -17,13 +17,13 @@ import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "Riel",
-  description: "Pasanaku no-custodio.",
+  description: "Túnel de pasanaku. Pollar abre, Unlock deja pasar, Fuji guarda.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body className="font-sans antialiased">
+      <body className="bg-canvas font-sans text-ink antialiased">
         <HideDevChrome />
         <Providers>
           <Header />

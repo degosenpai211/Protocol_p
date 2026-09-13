@@ -25,7 +25,7 @@ export const lockAbi = [
 
 const unlockClient = createPublicClient({
   chain: avalanche,
-  transport: http("https://api.avax.network/ext/bc/C/rpc", { batch: true }),
+  transport: http("https://api.avax.network/ext/bc/C/rpc", { batch: true, timeout: 8_000 }),
 });
 
 export function lockConfigured() {
@@ -34,10 +34,14 @@ export function lockConfigured() {
 
 export async function readHasValidKey(user: Address) {
   if (!lockConfigured()) return null;
-  return unlockClient.readContract({
-    address: UNLOCK_LOCK,
-    abi: lockAbi,
-    functionName: "getHasValidKey",
-    args: [user],
-  });
+  try {
+    return await unlockClient.readContract({
+      address: UNLOCK_LOCK,
+      abi: lockAbi,
+      functionName: "getHasValidKey",
+      args: [user],
+    });
+  } catch {
+    return false;
+  }
 }

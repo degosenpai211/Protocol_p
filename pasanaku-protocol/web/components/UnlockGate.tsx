@@ -50,14 +50,14 @@ function DefaultWall({
         <GhostPortal />
       </div>
       <div className="absolute inset-0 flex items-center justify-center p-4">
-        <div className="glow rise w-full max-w-md overflow-hidden rounded-[28px] border border-line bg-card/95 backdrop-blur-md">
-          <img src="/gremio-taller.png" alt="" className="h-36 w-full object-cover" />
+        <div className="glow rise w-full max-w-md overflow-hidden rounded-[22px] border border-line bg-card/95 backdrop-blur-md">
+          <img src="/gremio-taller.png" alt="" className="photo h-36 w-full rounded-none" />
           <div className="p-8 text-center sm:p-10">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-accent">Unlock</p>
+            <p className="kicker">Unlock</p>
             <h1 className="mt-4 font-display text-3xl font-semibold">{title}</h1>
             <p className="mt-3 text-[15px] leading-7 text-dim">{body}</p>
             <p className="mt-5 font-serif text-xl italic text-ink/70">1 USDC · Key · reglamento.</p>
-            <Link href="/join" className="btn mt-8 bg-ink text-white">
+            <Link href="/join" className="btn mt-8 bg-ink text-canvas">
               Ir a pagar
             </Link>
           </div>
@@ -73,10 +73,10 @@ function GhostPortal() {
       <p className="font-display text-5xl font-semibold">Sala del gremio</p>
       <p className="mt-3 font-serif text-2xl italic">Solo con Key.</p>
       <div className="mt-10 grid gap-4 sm:grid-cols-2">
-        <div className="h-40 rounded-[28px] bg-card" />
-        <div className="h-40 rounded-[28px] bg-card" />
+        <div className="h-40 rounded-[22px] bg-card" />
+        <div className="h-40 rounded-[22px] bg-card" />
       </div>
-      <div className="mt-4 h-56 rounded-[28px] bg-card" />
+      <div className="mt-4 h-56 rounded-[22px] bg-card" />
     </div>
   );
 }

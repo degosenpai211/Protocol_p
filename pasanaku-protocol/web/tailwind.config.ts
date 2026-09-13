@@ -5,15 +5,15 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        canvas: "#F7F4EE",
-        card: "#FFFFFF",
-        ink: "#1C1917",
-        soft: "#EFEAE3",
-        dim: "#6B6560",
-        line: "#E4DDD4",
-        accent: "#C45C26",
-        num: "#4D7C0F",
-        mint: "#E7F1E4",
+        canvas: "#0C0B09",
+        card: "#161411",
+        ink: "#F3EEE6",
+        soft: "#1C1915",
+        dim: "#A3988E",
+        line: "#2C2823",
+        accent: "#E0783A",
+        num: "#C6E08A",
+        mint: "#1A2316",
       },
       fontFamily: {
         sans: ["Figtree", "Segoe UI", "sans-serif"],
