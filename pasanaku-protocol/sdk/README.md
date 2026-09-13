@@ -8,7 +8,9 @@ import { createPasanaku } from "./src";
 const riel = createPasanaku({ publicClient, walletClient, protocol });
 await riel.createCircle(members, contribution, collateral, 1); // 1 = crédito
 await riel.join(0n);
+await riel.leave(0n); // solo pending / stale
 await riel.contribute(0n);
+await riel.contributeFor(0n, member);
 await riel.claim(0n);
 await riel.markDefault(0n, defaulter);
 await riel.withdraw();

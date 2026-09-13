@@ -65,11 +65,14 @@ describe("PasanakuProtocol", () => {
     expect(await proto.hasCollateral(id, A.address)).to.equal(true);
   });
 
-  it("2. no puedes contribuir sin join", async () => {
+  it("2. no puedes contribuir sin join / sin arrancar", async () => {
     await proto.createCircle([A.address, B.address, C.address], CONTRIB, COLLAT, CREDIT);
     const id = (await proto.circleCount()) - 1n;
-    // B no hizo join
-    await expect(proto.connect(B).contribute(id)).to.be.revertedWith("join first");
+    await expect(proto.connect(B).contribute(id)).to.be.revertedWith("not started");
+    await proto.connect(A).join(id);
+    await proto.connect(B).join(id);
+    await proto.connect(C).join(id);
+    await expect(proto.connect(D).contribute(id)).to.be.revertedWith("join first");
   });
 
   it("3. CREDIT: el del turno no puede aportar su ronda", async () => {
@@ -308,5 +311,59 @@ describe("PasanakuProtocol", () => {
     await proto.connect(C).claim(id);
     expect(await proto.isFinished(id)).to.equal(true);
     await expect(proto.connect(A).join(id)).to.be.revertedWith("finished");
+  });
+
+  it("18. leave en pending devuelve colateral; no leave si ya arrancó", async () => {
+    await proto.createCircle([A.address, B.address, C.address], CONTRIB, COLLAT, CREDIT);
+    const id = (await proto.circleCount()) - 1n;
+    expect(await proto.phase(id)).to.equal(0n); // pending
+    await proto.connect(A).join(id);
+    const before = await proto.withdrawable(A.address);
+    await expect(proto.connect(A).leave(id)).to.emit(proto, "Left");
+    expect((await proto.withdrawable(A.address)) - before).to.equal(COLLAT);
+    expect(await proto.hasJoined(id, A.address)).to.equal(false);
+
+    await proto.connect(A).join(id);
+    await proto.connect(B).join(id);
+    await proto.connect(C).join(id);
+    expect(await proto.phase(id)).to.equal(2n); // vivo
+    await expect(proto.connect(A).leave(id)).to.be.revertedWith("already started");
+  });
+
+  it("19. stale bloquea join y deja leave", async () => {
+    await proto.createCircle([A.address, B.address, C.address], CONTRIB, COLLAT, CREDIT);
+    const id = (await proto.circleCount()) - 1n;
+    await proto.connect(A).join(id);
+    await time.increase(7 * 24 * 60 * 60 + 1);
+    expect(await proto.phase(id)).to.equal(1n); // stale
+    await expect(proto.connect(B).join(id)).to.be.revertedWith("stale");
+    await expect(proto.connect(A).leave(id)).to.emit(proto, "Left");
+  });
+
+  it("20. contributeFor: D paga la cuota de B", async () => {
+    const id = await creditCircleJoined();
+    await token.mint(D.address, 1000n * UNIT);
+    await token.connect(D).approve(await proto.getAddress(), MAX);
+    await expect(proto.connect(D).contributeFor(id, B.address)).to.emit(proto, "Contributed");
+    expect(await proto.hasPaid(id, 0, B.address)).to.equal(true);
+    await proto.connect(C).contribute(id);
+    await proto.connect(A).claim(id);
+    expect(await proto.getRound(id)).to.equal(1n);
+  });
+
+  it("21. default parcial: el círculo sigue y claim usa solo lo aportado", async () => {
+    const id = await creditCircleJoined();
+    await proto.connect(B).contribute(id);
+    await proto.connect(A).markDefault(id, C.address);
+
+    const pot = CONTRIB; // solo B aportó tokens
+    const feeAmt = (pot * 100n) / 10000n;
+    const insAmt = (pot * 30n) / 10000n;
+    const skim = earlySkim(pot, 3n);
+    const aBefore = await proto.withdrawable(A.address);
+    await proto.connect(A).claim(id);
+    expect((await proto.withdrawable(A.address)) - aBefore).to.equal(pot - feeAmt - insAmt - skim);
+    expect(await proto.getRound(id)).to.equal(1n);
+    expect(await proto.phase(id)).to.equal(2n);
   });
 });

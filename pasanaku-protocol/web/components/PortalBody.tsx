@@ -5,6 +5,7 @@ import { formatEther } from "viem";
 import { useAccount, useReadContract } from "wagmi";
 import { protocolAbi } from "@/lib/abi";
 import { PROTOCOL_ADDRESS, UNLOCK_LOCK } from "@/lib/chain";
+import { phaseCopy, phaseLabel } from "@/lib/phase";
 
 function short(addr?: string) {
   if (!addr || addr.length < 10) return "—";
@@ -27,8 +28,16 @@ export function PortalBody() {
     functionName: "insuranceFund",
     query: { enabled: configured },
   });
+  const { data: phaseN } = useReadContract({
+    address: PROTOCOL_ADDRESS,
+    abi: protocolAbi,
+    functionName: "phase",
+    args: [0n],
+    query: { enabled: configured },
+  });
   const rep = score?.toString() ?? "0";
   const seguro = insurance ? Number(formatEther(insurance)).toFixed(2) : "0.00";
+  const estado = phaseLabel(phaseN);
 
   return (
     <div className="rise">
@@ -58,7 +67,7 @@ export function PortalBody() {
       </section>
 
       <section className="mt-14 grid gap-4 md:grid-cols-12">
-        <article className="glow rounded-[28px] border border-line bg-card p-7 md:col-span-4">
+        <article className="glow rounded-[28px] border border-line bg-card p-7 md:col-span-6">
           <p className="text-[11px] uppercase tracking-[0.2em] text-dim">Reputación</p>
           <p className="font-num mt-4 text-6xl text-num">{rep.padStart(2, "0")}</p>
           <p className="mt-3 text-[15px] leading-6 text-dim">
@@ -66,7 +75,7 @@ export function PortalBody() {
             no un like.
           </p>
         </article>
-        <article className="glow rounded-[28px] border border-line bg-card p-7 md:col-span-4">
+        <article className="glow rounded-[28px] border border-line bg-card p-7 md:col-span-6">
           <p className="text-[11px] uppercase tracking-[0.2em] text-dim">Seguro</p>
           <p className="font-num mt-4 text-6xl text-num">{seguro}</p>
           <p className="mt-3 text-[15px] leading-6 text-dim">
@@ -74,7 +83,12 @@ export function PortalBody() {
             vaciarlo.
           </p>
         </article>
-        <article className="glow rounded-[28px] border border-line bg-card p-7 md:col-span-4">
+        <article className="glow rounded-[28px] border border-line bg-card p-7 md:col-span-6">
+          <p className="text-[11px] uppercase tracking-[0.2em] text-dim">Estado · círculo 0</p>
+          <p className="mt-4 font-display text-2xl font-semibold capitalize">{estado}</p>
+          <p className="mt-3 text-[15px] leading-6 text-dim">{phaseCopy(phaseN)}</p>
+        </article>
+        <article className="glow rounded-[28px] border border-line bg-card p-7 md:col-span-6">
           <p className="text-[11px] uppercase tracking-[0.2em] text-dim">Membresía</p>
           <p className="mt-4 font-display text-2xl font-semibold">Unlock Key</p>
           <p className="mt-3 text-[15px] leading-6 text-dim">

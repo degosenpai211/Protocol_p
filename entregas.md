@@ -26,8 +26,8 @@ Pollar activa el gremio (Stellar). El pozo NO cruza a Avalanche. Sin bridge.
 Riel Pasanaku — bounty Avalanche
 
 Repo: _
-Contrato verificado (Fuji o C-Chain): 0xF6a9f97E700a0901609bFa425BBc5c71d2f7b25C
-Snowtrace: https://testnet.snowtrace.io/address/0xF6a9f97E700a0901609bFa425BBc5c71d2f7b25C
+Contrato verificado (Fuji o C-Chain): 0xF62Dcf355FF1f732A7B3226b1Cb7AFEDfdBA946B
+Snowtrace: https://testnet.snowtrace.io/address/0xF62Dcf355FF1f732A7B3226b1Cb7AFEDfdBA946B
 Por qué Avalanche: el pozo/turnos/colateral/seguro/claim/recover viven acá; Unlock ya está en C-Chain; gas bajo; verificación. No es un stamp.
 
 Tests: 17 passing. Demo ronda 0 en /app (Fuji, MockUSDC).

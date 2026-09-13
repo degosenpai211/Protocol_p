@@ -13,7 +13,7 @@ En `/app`, red Fuji:
 ## Fase 8 (Pollar)
 1. `pub_testnet_` ya está en `.env.local`. Falta destino Stellar `G…` en `NEXT_PUBLIC_POLLAR_DESTINO`.
    En [dashboard.pollar.xyz](https://dashboard.pollar.xyz) → tu app → **Allowed domains**: `http://localhost:3000` (sin esto, Google da 403).
-2. `/join`: Google → **Pagar** 1 USDC en **testnet** (probar).
+2. `/join`: Google → pedí USDC testnet en [faucet.circle.com](https://faucet.circle.com/) (Stellar Testnet, tu `G…`) → **Pagar**.
 3. Mainnet **una vez**: `NEXT_PUBLIC_POLLAR_NETWORK=mainnet`, `pub_mainnet_`, `NEXT_PUBLIC_POLLAR_MAINNET_ARMED=true`. Un solo $1. Hash grande → `README-POLLAR.md`. No repitas.
 4. Grant Key Unlock a quien pagó, si no la tiene.
 

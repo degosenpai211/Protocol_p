@@ -11,38 +11,47 @@ interface IPublicLock {
 /// @title PasanakuProtocol
 /// @notice Protocolo NO-CUSTODIO de pasanaku (ROSCA) on-chain.
 ///         - Nadie (ni el owner) puede retirar el pozo: no existe withdrawAll(onlyOwner).
-///         - El dinero solo se mueve por reglas: entra por rondas y sale COMPLETO al del turno.
+///         - El dinero solo se mueve por reglas. El pozo de la ronda es lo efectivamente aportado.
 ///         - Colateral chico y reembolsable + fondo de seguro + reputación.
 ///         - Dos modos: SAVINGS (todos aportan cada ronda) y CREDIT (el del turno no aporta).
-///         MVP de hackathon, no auditado. Roadmap: auditoría + subasta de turnos.
+///         MVP de hackathon, no auditado. Roadmap: auditoría + subasta / shuffle de turnos (ROSCASH).
 contract PasanakuProtocol is ReentrancyGuard {
-    IERC20 public immutable token; // stablecoin (MockUSDC en Fuji)
+    IERC20 public immutable token;
     address public feeRecipient;
-    /// @notice Unlock PublicLock (C-Chain) o UnlockMock (Fuji / tests). Sin Key no hay join.
     IPublicLock public immutable membershipLock;
 
-    uint256 public constant FEE_BPS = 100; // 1.00% del pozo -> protocolo
-    uint256 public constant INSURANCE_BPS = 30; // 0.30% del pozo -> fondo de seguro
-    /// @notice 6% de UN pozo se acumula para quien cierra el círculo (el último).
-    ///         Lo pagan los que cobran antes, a partes iguales. No es yield de Aave:
-    ///         el pozo semanal se va cada ronda; este recorte sí llega al que esperó 30 semanas.
+    uint256 public constant FEE_BPS = 100;
+    uint256 public constant INSURANCE_BPS = 30;
     uint256 public constant LAST_BONUS_BPS = 600;
     uint256 public constant RECOVER_TIMEOUT = 7 days;
+    uint256 public constant MIN_STALE = 3 days;
+    uint256 public constant MAX_STALE = 7 days;
 
-    uint256 public insuranceFund; // fondo de seguro on-chain (cubre huecos de default)
+    uint256 public insuranceFund;
 
     enum Mode {
         SAVINGS,
         CREDIT
     }
 
+    /// @notice 0 pending · 1 stale · 2 vivo · 3 cerrado
+    enum Phase {
+        Pending,
+        Stale,
+        Live,
+        Closed
+    }
+
     struct Circle {
         address[] members;
         uint256 contribution;
-        uint256 collateral; // chico: ej. 2-3 cuotas
+        uint256 collateral;
         uint256 round;
-        uint256 lastAction; // para recover() por timeout
-        uint256 lateBonus; // USDC acumulado para el último
+        uint256 lastAction;
+        uint256 lateBonus;
+        uint256 createdAt;
+        uint256 staleTime;
+        uint256 collected;
         Mode mode;
         bool finished;
         mapping(uint256 => mapping(address => bool)) paid;
@@ -52,15 +61,16 @@ contract PasanakuProtocol is ReentrancyGuard {
 
     uint256 public circleCount;
     mapping(uint256 => Circle) private circles;
-    mapping(address => uint256) public withdrawable; // pull-payment
-    mapping(address => uint256) public score; // reputación
+    mapping(address => uint256) public withdrawable;
+    mapping(address => uint256) public score;
 
     event CircleCreated(uint256 indexed id, uint8 mode, uint256 contribution, uint256 collateral);
     event Joined(uint256 indexed id, address indexed member);
-    event Contributed(uint256 indexed id, uint256 round, address indexed member);
+    event Left(uint256 indexed id, address indexed member, uint256 amount);
+    event Contributed(uint256 indexed id, uint256 round, address indexed member, address indexed payer);
     event Claimed(uint256 indexed id, uint256 round, address indexed recipient, uint256 net);
     event LateBonusAccrued(uint256 indexed id, uint256 amount, uint256 total);
-    event Defaulted(uint256 indexed id, uint256 round, address indexed member);
+    event Defaulted(uint256 indexed id, uint256 round, address indexed member, uint256 recovered);
     event Recovered(uint256 indexed id, address indexed member, uint256 amount);
     event Finished(uint256 indexed id);
 
@@ -73,10 +83,6 @@ contract PasanakuProtocol is ReentrancyGuard {
         feeRecipient = _feeRecipient;
         membershipLock = IPublicLock(_lock);
     }
-
-    // ---------------------------------------------------------------------
-    // Creación y entrada
-    // ---------------------------------------------------------------------
 
     function createCircle(
         address[] calldata _members,
@@ -99,17 +105,18 @@ contract PasanakuProtocol is ReentrancyGuard {
         c.collateral = _collateral;
         c.mode = _mode;
         c.lastAction = block.timestamp;
+        c.createdAt = block.timestamp;
+        c.staleTime = MAX_STALE;
         emit CircleCreated(id, uint8(_mode), _contribution, _collateral);
     }
 
-    /// @notice Entrar depositando el colateral (reembolsable al terminar limpio).
-    ///         Exige membresía Unlock (getHasValidKey).
     function join(uint256 id) external nonReentrant {
         require(membershipLock.getHasValidKey(msg.sender), "no membership");
         Circle storage c = circles[id];
         require(!c.finished, "finished");
         require(_isMember(c, msg.sender), "not listed");
         require(!c.joined[msg.sender], "already joined");
+        require(!_isStale(c), "stale");
         c.joined[msg.sender] = true;
         c.hasCollateral[msg.sender] = true;
         c.lastAction = block.timestamp;
@@ -119,9 +126,22 @@ contract PasanakuProtocol is ReentrancyGuard {
         emit Joined(id, msg.sender);
     }
 
-    // ---------------------------------------------------------------------
-    // Aportes y cobro
-    // ---------------------------------------------------------------------
+    /// @notice Salís si el círculo no arrancó (faltan joins). Devuelve el colateral.
+    function leave(uint256 id) external nonReentrant {
+        Circle storage c = circles[id];
+        require(!c.finished, "finished");
+        require(c.joined[msg.sender], "not joined");
+        require(!_started(c), "already started");
+        c.joined[msg.sender] = false;
+        uint256 amount = 0;
+        if (c.hasCollateral[msg.sender]) {
+            c.hasCollateral[msg.sender] = false;
+            amount = c.collateral;
+            if (amount > 0) withdrawable[msg.sender] += amount;
+        }
+        c.lastAction = block.timestamp;
+        emit Left(id, msg.sender, amount);
+    }
 
     function recipient(uint256 id) public view returns (address) {
         Circle storage c = circles[id];
@@ -130,25 +150,35 @@ contract PasanakuProtocol is ReentrancyGuard {
     }
 
     function contribute(uint256 id) external nonReentrant {
+        _contribute(id, msg.sender);
+    }
+
+    /// @notice Un tercero (hermano, gremio) paga la cuota de `member`.
+    function contributeFor(uint256 id, address member) external nonReentrant {
+        _contribute(id, member);
+    }
+
+    function _contribute(uint256 id, address member) private {
         Circle storage c = circles[id];
         require(!c.finished, "finished");
-        require(c.joined[msg.sender], "join first");
-        require(!c.paid[c.round][msg.sender], "already paid");
-        // En CREDIT el del turno no aporta su ronda. En SAVINGS aportan todos.
+        require(_started(c), "not started");
+        require(c.joined[member], "join first");
+        require(!c.paid[c.round][member], "already paid");
         if (c.mode == Mode.CREDIT) {
-            require(msg.sender != c.members[c.round], "recipient does not pay");
+            require(member != c.members[c.round], "recipient does not pay");
         }
-        c.paid[c.round][msg.sender] = true;
+        c.paid[c.round][member] = true;
+        c.collected += c.contribution;
         c.lastAction = block.timestamp;
         require(token.transferFrom(msg.sender, address(this), c.contribution), "pay fail");
-        emit Contributed(id, c.round, msg.sender);
+        emit Contributed(id, c.round, member, msg.sender);
     }
 
     function _allPaid(Circle storage c) private view returns (bool) {
         address r = c.members[c.round];
         for (uint256 i; i < c.members.length; i++) {
             address m = c.members[i];
-            if (c.mode == Mode.CREDIT && m == r) continue; // en CREDIT el del turno no paga
+            if (c.mode == Mode.CREDIT && m == r) continue;
             if (!c.paid[c.round][m]) return false;
         }
         return true;
@@ -158,8 +188,7 @@ contract PasanakuProtocol is ReentrancyGuard {
         return _allPaid(circles[id]);
     }
 
-    /// @notice El del turno cobra el pozo (menos fee, seguro y recorte al bono del último).
-    ///         Quien cierra el círculo recibe además lateBonus (~6% de un pozo).
+    /// @notice Cobra el pozo efectivamente aportado (no el teórico). Defaults ya acreditados aparte.
     function claim(uint256 id) external nonReentrant {
         Circle storage c = circles[id];
         require(!c.finished, "finished");
@@ -167,15 +196,13 @@ contract PasanakuProtocol is ReentrancyGuard {
         require(_allPaid(c), "missing contributions");
 
         uint256 n = c.members.length;
-        uint256 payers = c.mode == Mode.CREDIT ? n - 1 : n;
-        uint256 pot = c.contribution * payers;
+        uint256 pot = c.collected;
         uint256 fee = (pot * FEE_BPS) / 10000;
         uint256 insurance = (pot * INSURANCE_BPS) / 10000;
         bool isLast = c.round + 1 == n;
 
         uint256 skim = 0;
-        if (!isLast && n > 1) {
-            // 6% de un pozo, repartido entre las rondas tempranas
+        if (!isLast && n > 1 && pot > 0) {
             skim = (pot * LAST_BONUS_BPS) / (10000 * (n - 1));
             c.lateBonus += skim;
             emit LateBonusAccrued(id, skim, c.lateBonus);
@@ -190,6 +217,7 @@ contract PasanakuProtocol is ReentrancyGuard {
         withdrawable[msg.sender] += net;
         withdrawable[feeRecipient] += fee;
         insuranceFund += insurance;
+        c.collected = 0;
         c.lastAction = block.timestamp;
         emit Claimed(id, c.round, msg.sender, net);
 
@@ -209,46 +237,49 @@ contract PasanakuProtocol is ReentrancyGuard {
         }
     }
 
-    // ---------------------------------------------------------------------
-    // Default y recuperación
-    // ---------------------------------------------------------------------
-
-    /// @notice Cubre al del turno con el colateral del que no pagó; el fondo cubre el hueco.
+    /// @notice Cubre lo que haya (colateral + seguro) y marca pagado para que el círculo siga.
     function markDefault(uint256 id, address defaulter) external nonReentrant {
         Circle storage c = circles[id];
         require(!c.finished, "finished");
+        require(_started(c), "not started");
         require(c.mode == Mode.CREDIT, "no default in savings");
         require(c.joined[defaulter], "not member");
         require(defaulter != c.members[c.round], "recipient not payer");
         require(!c.paid[c.round][defaulter], "did pay");
-        require(c.hasCollateral[defaulter], "no collateral");
-
-        c.hasCollateral[defaulter] = false;
-        c.paid[c.round][defaulter] = true; // se considera cubierto
 
         address r = c.members[c.round];
         uint256 owed = c.contribution;
-        uint256 fromCollateral = owed <= c.collateral ? owed : c.collateral;
-        withdrawable[r] += fromCollateral;
+        uint256 recovered = 0;
 
-        if (owed > fromCollateral) {
-            uint256 gap = owed - fromCollateral;
+        if (c.hasCollateral[defaulter]) {
+            c.hasCollateral[defaulter] = false;
+            uint256 fromCollateral = owed <= c.collateral ? owed : c.collateral;
+            if (fromCollateral > 0) {
+                withdrawable[r] += fromCollateral;
+                recovered += fromCollateral;
+            }
+        }
+
+        if (owed > recovered) {
+            uint256 gap = owed - recovered;
             uint256 cover = gap <= insuranceFund ? gap : insuranceFund;
             if (cover > 0) {
                 insuranceFund -= cover;
                 withdrawable[r] += cover;
+                recovered += cover;
             }
         }
 
-        if (score[defaulter] > 0) score[defaulter] -= 1; // castigo reputación
+        c.paid[c.round][defaulter] = true;
+        if (score[defaulter] > 0) score[defaulter] -= 1;
         c.lastAction = block.timestamp;
-        emit Defaulted(id, c.round, defaulter);
+        emit Defaulted(id, c.round, defaulter, recovered);
     }
 
-    /// @notice Si el círculo se congela, cada quien recupera su colateral tras el timeout.
     function recover(uint256 id) external nonReentrant {
         Circle storage c = circles[id];
         require(!c.finished, "finished");
+        require(_started(c), "not started");
         require(block.timestamp > c.lastAction + RECOVER_TIMEOUT, "not stuck yet");
         require(c.hasCollateral[msg.sender], "nothing to recover");
         c.hasCollateral[msg.sender] = false;
@@ -257,17 +288,12 @@ contract PasanakuProtocol is ReentrancyGuard {
         emit Recovered(id, msg.sender, amount);
     }
 
-    /// @notice Retira lo acreditado. El dinero sale del contrato a tu wallet.
     function withdraw() external nonReentrant {
         uint256 amt = withdrawable[msg.sender];
         require(amt > 0, "nothing");
         withdrawable[msg.sender] = 0;
         require(token.transfer(msg.sender, amt), "transfer fail");
     }
-
-    // ---------------------------------------------------------------------
-    // Vistas (para el SDK / front)
-    // ---------------------------------------------------------------------
 
     function getRound(uint256 id) external view returns (uint256) {
         return circles[id].round;
@@ -301,6 +327,15 @@ contract PasanakuProtocol is ReentrancyGuard {
         return circles[id].lateBonus;
     }
 
+    function phase(uint256 id) public view returns (uint8) {
+        Circle storage c = circles[id];
+        if (c.createdAt == 0) return uint8(Phase.Pending);
+        if (c.finished) return uint8(Phase.Closed);
+        if (_started(c)) return uint8(Phase.Live);
+        if (_isStale(c)) return uint8(Phase.Stale);
+        return uint8(Phase.Pending);
+    }
+
     function getCircle(uint256 id)
         external
         view
@@ -312,7 +347,10 @@ contract PasanakuProtocol is ReentrancyGuard {
             uint256 lastAction,
             uint8 mode,
             bool finished,
-            uint256 lateBonus
+            uint256 lateBonus,
+            uint256 createdAt,
+            uint256 staleTime,
+            uint256 collected
         )
     {
         Circle storage c = circles[id];
@@ -324,12 +362,27 @@ contract PasanakuProtocol is ReentrancyGuard {
             c.lastAction,
             uint8(c.mode),
             c.finished,
-            c.lateBonus
+            c.lateBonus,
+            c.createdAt,
+            c.staleTime,
+            c.collected
         );
     }
 
     function _isMember(Circle storage c, address u) private view returns (bool) {
         for (uint256 i; i < c.members.length; i++) if (c.members[i] == u) return true;
         return false;
+    }
+
+    function _started(Circle storage c) private view returns (bool) {
+        if (c.members.length == 0) return false;
+        for (uint256 i; i < c.members.length; i++) {
+            if (!c.joined[c.members[i]]) return false;
+        }
+        return true;
+    }
+
+    function _isStale(Circle storage c) private view returns (bool) {
+        return !_started(c) && block.timestamp > c.createdAt + c.staleTime;
     }
 }

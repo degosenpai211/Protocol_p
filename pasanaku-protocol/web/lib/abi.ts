@@ -27,6 +27,30 @@ export const protocolAbi = [
   },
   {
     type: "function",
+    name: "contributeFor",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "id", type: "uint256" },
+      { name: "member", type: "address" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "leave",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "id", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "phase",
+    stateMutability: "view",
+    inputs: [{ name: "id", type: "uint256" }],
+    outputs: [{ type: "uint8" }],
+  },
+  {
+    type: "function",
     name: "claim",
     stateMutability: "nonpayable",
     inputs: [{ name: "id", type: "uint256" }],
@@ -133,6 +157,9 @@ export const protocolAbi = [
       { name: "mode", type: "uint8" },
       { name: "finished", type: "bool" },
       { name: "lateBonus", type: "uint256" },
+      { name: "createdAt", type: "uint256" },
+      { name: "staleTime", type: "uint256" },
+      { name: "collected", type: "uint256" },
     ],
   },
 ] as const;

@@ -14,9 +14,9 @@ Pegá después de `npm run deploy:fuji`:
 |---|---|
 | MockUSDC | `0xaABC7cBEd63e8dEE6b32bBd428c423494205145f` |
 | UnlockMock (join en Fuji) | `0x194cfB51bd3921e35B5800a886Cf673a13F079Cc` |
-| PasanakuProtocol | `0xF6a9f97E700a0901609bFa425BBc5c71d2f7b25C` |
+| PasanakuProtocol | `0xF62Dcf355FF1f732A7B3226b1Cb7AFEDfdBA946B` |
 
-Explorer: https://testnet.snowtrace.io/address/0xF6a9f97E700a0901609bFa425BBc5c71d2f7b25C
+Explorer: https://testnet.snowtrace.io/address/0xF62Dcf355FF1f732A7B3226b1Cb7AFEDfdBA946B
 
 ## Tests
 
@@ -25,9 +25,11 @@ cd pasanaku-protocol
 npm test
 ```
 
-17 tests, incluido “sin membresía no hay join”, rondas y colateral.
+21 tests: leave en pending, stale 7d, contributeFor, default parcial (el círculo sigue).
 
-SDK (túnel): `pasanaku-protocol/sdk/` — createCircle, join, contribute, claim, withdraw, getState.
+SDK: createCircle, join, leave, contribute, contributeFor, claim, markDefault, recover, withdraw, getState.
+
+Roadmap (no este finde): shuffle de turnos con `prevrandao` + subasta ROSCASH. El guion A→B→C queda fijo.
 
 ## Gate demo
 

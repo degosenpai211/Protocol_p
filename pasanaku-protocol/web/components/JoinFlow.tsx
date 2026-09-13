@@ -14,6 +14,7 @@ import {
   stellarExpertTx,
   usdcAsset,
 } from "@/lib/pollar";
+import type { SubmitOutcome, TransactionState, WalletBalanceState } from "@pollar/core";
 
 export function JoinFlow() {
   if (!POLLAR_API_KEY) {
@@ -91,7 +92,8 @@ function JoinLayout({ hint, children }: { hint?: string; children?: React.ReactN
 
 function PollarPay() {
   const { hasKey } = useUnlockKey();
-  const { isAuthenticated, wallet, login, openLoginModal, runTx, tx, getClient } = usePollar();
+  const { isAuthenticated, wallet, login, openLoginModal, runTx, tx, getClient, walletBalance, refreshWalletBalance } =
+    usePollar();
   const [hash, setHash] = useState("");
   const [error, setError] = useState("");
   const destino = POLLAR_DESTINO;
@@ -99,11 +101,18 @@ function PollarPay() {
   const mainnet = POLLAR_NETWORK === "mainnet";
   const canPayMainnet = !mainnet || POLLAR_MAINNET_ARMED;
   const destinoOk = destino.startsWith("G");
+  const usdc = usdcFromBalance(walletBalance);
+  const sameWallet = !!wallet?.address && destino === wallet.address;
 
   useEffect(() => {
     const saved = window.localStorage.getItem(HASH_STORAGE_KEY);
     if (saved) setHash(saved);
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    void refreshWalletBalance();
+  }, [isAuthenticated, refreshWalletBalance]);
 
   useEffect(() => {
     return getClient().onAuthStateChange((state) => {
@@ -140,13 +149,23 @@ function PollarPay() {
       setError("Ya hay hash.");
       return;
     }
-    const result = await runTx(
-      "payment",
-      { destination: destino, amount: "1.00", asset: usdcAsset() },
-      { memo: { type: "text", value: "Riel gremio" } },
-    );
-    if (result.status === "success" && result.hash) persist(result.hash);
-    else if (result.status === "error") setError("Pago falló.");
+    if (!mainnet && usdc !== null && usdc < 1) {
+      setError(
+        "Tu wallet tiene 0 USDC testnet. Pedí en faucet.circle.com (red Stellar Testnet) con tu G…, esperá el crédito y volvé a pagar.",
+      );
+      return;
+    }
+    try {
+      const result = await runTx(
+        "payment",
+        { destination: destino, amount: "1.00", asset: usdcAsset() },
+        { memo: { type: "text", value: "Riel gremio" } },
+      );
+      if (result.status === "success" && result.hash) persist(result.hash);
+      else if (result.status === "error") setError(describePayError(result, tx));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Pago falló.");
+    }
   }
 
   return (
@@ -162,7 +181,10 @@ function PollarPay() {
         <p className="mt-4 text-[15px] leading-6 text-dim">
           Membresía del gremio. No financia el pasanaku. El contrato de Fuji no ve este dólar.
         </p>
-        <p className="mt-4 break-all font-mono text-[11px] text-dim">
+        <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-dim">
+          Destino del cobro (tesorería)
+        </p>
+        <p className="mt-1 break-all font-mono text-[11px] text-dim">
           {destinoOk ? destino : "Falta NEXT_PUBLIC_POLLAR_DESTINO (G…)"}
         </p>
         {!isAuthenticated ? (
@@ -183,11 +205,35 @@ function PollarPay() {
             </p>
           </div>
         ) : (
-          <p className="mt-6 font-mono text-xs text-dim">
-            {wallet?.address?.slice(0, 6)}…{wallet?.address?.slice(-4)}
+          <p className="mt-6 text-xs leading-5 text-dim">
+            Tu wallet Pollar (paga, no cobra):{" "}
+            <span className="font-mono">{wallet?.address}</span>
           </p>
         )}
 
+        {isAuthenticated && (
+          <p className="mt-3 text-xs leading-5 text-dim">
+            Saldo USDC: {usdc === null ? "…" : usdc.toFixed(2)}
+            {!mainnet && (
+              <>
+                {" · "}
+                <a
+                  href="https://faucet.circle.com/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-accent underline underline-offset-2"
+                >
+                  Faucet Circle (Stellar Testnet)
+                </a>
+              </>
+            )}
+          </p>
+        )}
+        {sameWallet && (
+          <p className="mt-2 text-xs leading-5 text-dim">
+            Destino = tu misma G. En testnet está bien; igual necesitás ≥ 1 USDC para que la tx exista.
+          </p>
+        )}
         {mainnet && !POLLAR_MAINNET_ARMED && (
           <p className="mt-3 text-xs text-accent">Armá mainnet en .env cuando toque gastar el USDC real.</p>
         )}
@@ -237,4 +283,30 @@ function PollarPay() {
       </p>
     </JoinLayout>
   );
+}
+
+function usdcFromBalance(state: WalletBalanceState): number | null {
+  if (state.step !== "loaded") return null;
+  const row = state.data.balances.find((b) => b.code === "USDC");
+  if (!row || row.balance == null) return 0;
+  const n = Number(row.balance);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function describePayError(
+  result: Extract<SubmitOutcome, { status: "error" }>,
+  tx: TransactionState,
+): string {
+  const extra = tx.step === "error" ? [tx.details, tx.message, tx.code] : [];
+  const blob = [result.details, result.message, result.code, result.resultCode, ...extra]
+    .filter(Boolean)
+    .join(" · ");
+  const t = blob.toLowerCase();
+  if (t.includes("underfund") || t.includes("insufficient") || t.includes("op_underfunded")) {
+    return "Sin USDC suficiente. Testnet: faucet.circle.com (Stellar Testnet) con tu G…";
+  }
+  if (t.includes("no_trust") || t.includes("trustline") || t.includes("op_no_trust")) {
+    return "Falta trustline USDC en destino o en tu wallet.";
+  }
+  return blob || "Pago falló.";
 }

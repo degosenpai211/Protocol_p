@@ -8,6 +8,7 @@ import { PROTOCOL_ADDRESS, TOKEN_ADDRESS } from "@/lib/chain";
 import { DEMO_MEMBERS } from "@/lib/demo";
 import { useUnlockKey } from "@/components/UnlockGate";
 import { useRiel } from "@/lib/useRiel";
+import { phaseCopy, phaseLabel } from "@/lib/phase";
 
 function short(addr?: string) {
   if (!addr) return "—";
@@ -23,6 +24,7 @@ export function Studio() {
   const [contrib, setContrib] = useState("5");
   const [collat, setCollat] = useState("10");
   const [mode, setMode] = useState<"0" | "1">("1");
+  const [onBehalf, setOnBehalf] = useState("");
 
   const id = BigInt(circleId || "0");
 
@@ -33,12 +35,14 @@ export function Studio() {
       { address: PROTOCOL_ADDRESS, abi: protocolAbi, functionName: "getCircle", args: [id] },
       { address: PROTOCOL_ADDRESS, abi: protocolAbi, functionName: "insuranceFund" },
       { address: PROTOCOL_ADDRESS, abi: protocolAbi, functionName: "allPaid", args: [id] },
+      { address: PROTOCOL_ADDRESS, abi: protocolAbi, functionName: "phase", args: [id] },
     ],
   });
 
   const circle = core?.[0]?.result;
   const insurance = core?.[1]?.result;
   const allPaid = core?.[2]?.result;
+  const phaseN = core?.[3]?.result;
 
   const { data: mine } = useReadContracts({
     allowFailure: true,
@@ -233,7 +237,9 @@ NEXT_PUBLIC_TOKEN_ADDRESS=`}
       <section className="glow rounded-[28px] border border-line bg-card p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-num">vivo</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-num">
+              {phaseLabel(phaseN)}
+            </p>
             <h2 className="mt-1 text-xl font-semibold">Bono</h2>
           </div>
           <input
@@ -249,6 +255,7 @@ NEXT_PUBLIC_TOKEN_ADDRESS=`}
               {parsed.finished ? "Cerrado" : `${parsed.round + 1n}/${parsed.n}`} ·{" "}
               {parsed.modeN === 1 ? "crédito" : "ahorro"} · {short(recipient)}
             </p>
+            <p className="mt-2 text-sm leading-6 text-dim">{phaseCopy(phaseN)}</p>
 
             <div className="mt-5">
               <div className="flex justify-between text-xs text-dim">
@@ -305,6 +312,24 @@ NEXT_PUBLIC_TOKEN_ADDRESS=`}
               })}
             </ul>
 
+            <label className="mt-5 block text-[11px] font-semibold uppercase tracking-[0.16em] text-dim">
+              Aportar por (Gremio)
+              <input
+                value={onBehalf}
+                onChange={(e) => setOnBehalf(e.target.value.trim())}
+                placeholder="0x… del miembro"
+                className="input mt-2 font-mono text-xs"
+              />
+            </label>
+            <button
+              type="button"
+              disabled={!isConnected || !riel || !/^0x[a-fA-F0-9]{40}$/.test(onBehalf)}
+              onClick={() => runRiel(() => riel!.contributeFor(id, onBehalf as Address))}
+              className="btn mt-2 w-full border border-line bg-soft text-ink disabled:opacity-40"
+            >
+              Aportar por…
+            </button>
+
             <div className="mt-5 grid grid-cols-2 gap-2">
               <Action
                 disabled={!isConnected || !!joined || (lockOn && hasKey !== true) || !riel}
@@ -326,6 +351,9 @@ NEXT_PUBLIC_TOKEN_ADDRESS=`}
                 onClick={() => runRiel(() => riel!.withdraw())}
               >
                 Retirar
+              </Action>
+              <Action disabled={!isConnected || !joined || !riel} onClick={() => runRiel(() => riel!.leave(id))}>
+                Salir
               </Action>
               <Action disabled={!isConnected || !riel} onClick={() => runRiel(() => riel!.recover(id))}>
                 Recuperar
