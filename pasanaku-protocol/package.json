@@ -9,7 +9,8 @@
     "build": "hardhat compile",
     "test": "hardhat test",
     "simulate": "hardhat run scripts/simulate-cycle.ts",
-    "deploy:fuji": "hardhat run scripts/deploy.ts --network fuji"
+    "deploy:fuji": "hardhat run scripts/deploy.ts --network fuji",
+    "deploy:avalanche": "hardhat run scripts/deploy-avalanche.ts --network avalanche"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

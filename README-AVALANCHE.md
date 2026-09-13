@@ -4,11 +4,23 @@ El pozo, turnos, colateral, seguro, claim, recover y bono ~6% al último viven e
 
 ## Por qué Avalanche
 
-Unlock ya está en C-Chain. EVM, gas bajo, verificación Snowtrace. Fuji (43113) para la demo con MockUSDC; C-Chain si el mentor lo exige.
+Unlock ya está en C-Chain. EVM, gas bajo, verificación Snowtrace. Fuji (43113) para la ronda demo barata; **C-Chain (43114)** es el deploy del bounty.
 
-## Contratos (Fuji)
+## Contratos (Avalanche C-Chain)
 
-Pegá después de `npm run deploy:fuji`:
+`npm run deploy:avalanche` — MockUSDC + protocolo. El lock es el Unlock **real**.
+
+| | Address |
+|---|---|
+| MockUSDC | `0xF6a9f97E700a0901609bFa425BBc5c71d2f7b25C` |
+| PasanakuProtocol | `0x3ef3910e476eC2Df6717a0438493Db85289e76A4` |
+| Unlock lock (C-Chain) | `0x6f8474145F4DA3A1987FdaCf4930C8c62A974303` |
+
+Explorer: https://snowtrace.io/address/0x3ef3910e476eC2Df6717a0438493Db85289e76A4
+
+`join()` pide Key de ese lock. A/B/C ya tienen 1000 mUSDC minteados.
+
+## Contratos (Fuji · demo)
 
 | | Address |
 |---|---|

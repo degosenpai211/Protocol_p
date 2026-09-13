@@ -48,7 +48,27 @@ img {
 
 .photo {
   @apply rounded-[22px] object-cover;
-  filter: saturate(0.85) contrast(1.08);
+  filter: saturate(0.88) contrast(1.06);
+}
+
+.photo-veil {
+  background: linear-gradient(to top, rgba(12, 11, 9, 0.88) 0%, rgba(12, 11, 9, 0.15) 45%, transparent 100%);
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  gap: 2.5rem;
+  animation: marquee 36s linear infinite;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 h1,
@@ -165,7 +185,8 @@ h3 {
   .rise-3,
   .live-dot,
   .rule-bar,
-  .rail-line::after {
+  .rail-line::after,
+  .marquee-track {
     animation: none;
   }
   .btn:hover {
