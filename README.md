@@ -1,5 +1,7 @@
 # Riel — pasanaku no-custodio (Avalanche + Unlock + Pollar)
 
+Repo de entrega: [Protocol_p](https://github.com/degosenpai211/Protocol_p).
+
 Pitch: *el pasanaku del gremio, con membresía Unlock, reglas en Avalanche y un pago real Pollar. Somos el riel: el dinero no pasa por nosotros.*
 
 No hay bridge Stellar ↔ Avalanche. Tres bounties, tres evidencias:
